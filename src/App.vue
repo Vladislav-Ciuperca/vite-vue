@@ -3,72 +3,50 @@ import axios from 'axios';
 import { store } from './data/store.js';
 import AppHeader from './components/AppHeader.vue';
 import AppBody from './components/AppBody.vue';
+import DetailsModal from './components/DetailsModal.vue'; 
 
 export default {
   name: 'App',
-  components: { AppHeader, AppBody },
+  components: { AppHeader, AppBody, DetailsModal },
   data() { return { store }; },
   methods: {
-    // Gestisce la ricerca globale
     handleSearch() {
       if (this.store.searchText === '') {
-        this.fetchData('all');
+        this.store.activeView = 'all';
         return;
       }
-      this.store.currentType = `Risultati per: ${this.store.searchText}`;
-      
       const movieUrl = `${this.store.config.base_url}/search/movie?api_key=${this.store.config.api_key}&query=${this.store.searchText}`;
       const tvUrl = `${this.store.config.base_url}/search/tv?api_key=${this.store.config.api_key}&query=${this.store.searchText}`;
 
       Promise.all([axios.get(movieUrl), axios.get(tvUrl)]).then(([resMovie, resTv]) => {
-        this.store.movies = [...resMovie.data.results, ...resTv.data.results];
+        this.store.searchResults = [...resMovie.data.results, ...resTv.data.results];
+        this.store.activeView = 'search';
       });
     },
+    setCategory(category) {
+      this.store.searchText = '';
+      this.store.activeView = category;
+    },
+    fetchAllData() {
+      const trendingUrl = `${this.store.config.base_url}/trending/all/week?api_key=${this.store.config.api_key}`;
+      const movieUrl = `${this.store.config.base_url}/movie/popular?api_key=${this.store.config.api_key}`;
+      const tvUrl = `${this.store.config.base_url}/tv/popular?api_key=${this.store.config.api_key}`;
 
-    // Gestisce i click sui link (Home, Film, Serie)
-    fetchData(category) {
-      this.store.searchText = ''; 
-      let endpoint = '';
-
-      switch(category) {
-        case 'movie':
-          this.store.currentType = 'Film Popolari';
-          endpoint = '/movie/popular';
-          break;
-        case 'tv':
-          this.store.currentType = 'Serie TV Popolari';
-          endpoint = '/tv/popular';
-          break;
-        default:
-          this.store.currentType = 'In Evidenza (Home)';
-          endpoint = '/trending/all/week';
-      }
-
-      const url = `${this.store.config.base_url}${endpoint}?api_key=${this.store.config.api_key}`;
-      axios.get(url).then(res => {
-        this.store.movies = res.data.results;
-      });
+      axios.get(trendingUrl).then(res => { this.store.trending = res.data.results; });
+      axios.get(movieUrl).then(res => { this.store.movies = res.data.results; });
+      axios.get(tvUrl).then(res => { this.store.tvShows = res.data.results; });
     }
   },
   mounted() {
-    this.fetchData('all');
+    this.fetchAllData();
   }
 }
 </script>
 
 <template>
   <div class="app-container">
-    <AppHeader @performSearch="handleSearch" @changeCategory="fetchData" />
+    <AppHeader @performSearch="handleSearch" @changeCategory="setCategory" />
     <AppBody />
+    <DetailsModal />
   </div>
 </template>
-
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-  background-color: #141414;
-  color: white;
-}
-
-</style>

@@ -5,42 +5,93 @@ export default {
     name: 'AppBody',
     data() { return { store }; },
     methods: {
-        scrollLeft() { this.$refs.container.scrollBy({ left: -800, behavior: 'smooth' }); },
-        scrollRight() { this.$refs.container.scrollBy({ left: 800, behavior: 'smooth' }); }
+        scrollLeft(e) {
+            e.target.closest('.slider-wrapper').querySelector('.cards-row').scrollBy({ left: -800, behavior: 'smooth' });
+        },
+        scrollRight(e) {
+            e.target.closest('.slider-wrapper').querySelector('.cards-row').scrollBy({ left: 800, behavior: 'smooth' });
+        },
+        openDetails(item) {
+            this.store.selectedItem = item;
+        }
     }
 }
 </script>
 
 <template>
     <main class="app-body">
-        <div class="row-container">
-            <h2 class="row-title">{{ store.currentType }}</h2>
 
+        <div v-if="store.activeView === 'search'" class="row-container">
+            <h2 class="row-title">Risultati per: {{ store.searchText }}</h2>
             <div class="slider-wrapper">
                 <button class="nav-btn left" @click="scrollLeft">‹</button>
-
-                <div class="cards-row" ref="container">
-                    <div v-for="item in store.movies" :key="item.id" class="movie-card">
+                <div class="cards-row">
+                    <div v-for="item in store.searchResults" :key="item.id" class="movie-card"
+                        @click="openDetails(item)">
                         <img v-if="item.poster_path" :src="store.config.img_url + item.poster_path"
                             :alt="item.title || item.name">
-                        <div v-else class="placeholder-poster">
-                            {{ item.title || item.name }}
-                        </div>
-
+                        <div v-else class="placeholder-poster">{{ item.title || item.name }}</div>
                         <div class="card-info">
                             <h3>{{ item.title || item.name }}</h3>
-                            <div class="meta">
-                                <span>⭐ {{ item.vote_average.toFixed(1) }}</span>
-                                <span class="lang">{{ item.original_language.toUpperCase() }}</span>
-                            </div>
-                            <p class="overview">{{ item.overview.substring(0, 100) }}...</p>
+                            <div class="meta"><span>⭐ {{ item.vote_average.toFixed(1) }}</span></div>
                         </div>
                     </div>
                 </div>
-
                 <button class="nav-btn right" @click="scrollRight">›</button>
             </div>
         </div>
+
+        <div v-if="store.activeView === 'all'" class="row-container">
+            <h2 class="row-title">In Evidenza questa settimana</h2>
+            <div class="slider-wrapper">
+                <button class="nav-btn left" @click="scrollLeft">‹</button>
+                <div class="cards-row">
+                    <div v-for="item in store.trending" :key="item.id" class="movie-card" @click="openDetails(item)">
+                        <img :src="store.config.img_url + item.poster_path" :alt="item.title || item.name">
+                        <div class="card-info">
+                            <h3>{{ item.title || item.name }}</h3>
+                            <div class="meta"><span>⭐ {{ item.vote_average.toFixed(1) }}</span></div>
+                        </div>
+                    </div>
+                </div>
+                <button class="nav-btn right" @click="scrollRight">›</button>
+            </div>
+        </div>
+
+        <div v-if="store.activeView === 'movie' || store.activeView === 'all'" class="row-container">
+            <h2 class="row-title">Film Popolari</h2>
+            <div class="slider-wrapper">
+                <button class="nav-btn left" @click="scrollLeft">‹</button>
+                <div class="cards-row">
+                    <div v-for="item in store.movies" :key="item.id" class="movie-card" @click="openDetails(item)">
+                        <img :src="store.config.img_url + item.poster_path" :alt="item.title">
+                        <div class="card-info">
+                            <h3>{{ item.title }}</h3>
+                            <div class="meta"><span>⭐ {{ item.vote_average.toFixed(1) }}</span></div>
+                        </div>
+                    </div>
+                </div>
+                <button class="nav-btn right" @click="scrollRight">›</button>
+            </div>
+        </div>
+
+        <div v-if="store.activeView === 'tv' || store.activeView === 'all'" class="row-container">
+            <h2 class="row-title">Serie TV Popolari</h2>
+            <div class="slider-wrapper">
+                <button class="nav-btn left" @click="scrollLeft">‹</button>
+                <div class="cards-row">
+                    <div v-for="item in store.tvShows" :key="item.id" class="movie-card" @click="openDetails(item)">
+                        <img :src="store.config.img_url + item.poster_path" :alt="item.name">
+                        <div class="card-info">
+                            <h3>{{ item.name }}</h3>
+                            <div class="meta"><span>⭐ {{ item.vote_average.toFixed(1) }}</span></div>
+                        </div>
+                    </div>
+                </div>
+                <button class="nav-btn right" @click="scrollRight">›</button>
+            </div>
+        </div>
+
     </main>
 </template>
 
@@ -49,6 +100,11 @@ export default {
     padding-top: 100px;
     min-height: 100vh;
     background-color: #141414;
+    padding-bottom: 50px;
+}
+
+.row-container {
+    margin-bottom: 30px;
 }
 
 .row-title {
@@ -60,7 +116,6 @@ export default {
 
 .slider-wrapper {
     position: relative;
-
 }
 
 .cards-row {
@@ -79,6 +134,7 @@ export default {
     position: relative;
     transition: transform 0.3s ease;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .movie-card:hover {
@@ -104,6 +160,8 @@ export default {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
+    text-align: center;
     opacity: 0;
     transition: opacity 0.3s;
     border-radius: 4px;
@@ -119,24 +177,9 @@ export default {
 }
 
 .meta {
-    display: flex;
-    justify-content: space-between;
     font-size: 0.8rem;
-    margin-bottom: 8px;
     color: #46d369;
-}
-
-.lang {
-    background: #333;
-    padding: 2px 5px;
-    border-radius: 3px;
-    color: #fff;
-}
-
-.overview {
-    font-size: 0.7rem;
-    color: #ccc;
-    line-height: 1.2;
+    font-weight: bold;
 }
 
 .nav-btn {
@@ -174,6 +217,44 @@ export default {
     text-align: center;
     font-size: 0.8rem;
     padding: 10px;
-    color: #666;
+    color: #ccc;
+}
+
+
+
+/* medfiaqueries */
+
+
+.movie-card {
+    min-width: 200px; 
+    aspect-ratio: 2/3;
+}
+
+@media (max-width: 1024px) {
+    .movie-card {
+        min-width: 160px; 
+    }
+    .row-title {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .app-body {
+        padding-top: 80px; 
+    }
+    .movie-card {
+        min-width: 130px; 
+    }
+    .nav-btn {
+        display: none; 
+    }
+    .cards-row {
+        overflow-x: auto;
+        padding: 10px 4%;
+    }
+    .card-info h3 {
+        font-size: 0.7rem; 
+    }
 }
 </style>
